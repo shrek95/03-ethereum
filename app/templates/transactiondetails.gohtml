@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    
+    <title>APPLY</title>
+    <style>
+    table {
+        font-family: arial, sans-serif;
+        border-collapse: collapse;
+        width: 100%;
+    }
+
+    td, th {
+        border: 1px solid #dddddd;
+        text-align: left;
+        padding: 8px;
+    }
+
+    tr:nth-child(even) {
+        background-color: #dddddd;
+    }
+    </style>
+
+</head>
+
+<strong>Transaction-Details</strong><br>
+
+<body>
+<h2>HTML Table</h2>
+
+<table>
+  <thead>
+  <tr>
+    <th>Transaction ID</th>
+    <th>Block ID</th>
+    <th>Transaction Hash</th>
+    <th>Value</th>
+    <th>Receiver</th>
+    <th>Sender</th>
+  </tr>
+  </thead>
+
+
+  <tfoot>
+  <tr>
+    <td>END</td>
+    <td>END</td>
+    <td>END</td>
+    <td>END</td>
+    <td>END</td>
+    <td>END</td>
+  </tr>
+  </tfoot>
+
+  <tbody>
+  {{range $tx := .}}
+  <tr>
+    <td>{{$tx.Tx_id}}</td>
+    <td>{{$tx.Block_id}}</td>
+    <td>{{$tx.Tx_hash}}</td>
+    <td>{{$tx.Value}}</td>
+    <td>{{$tx.Receiver}}</td>
+    <td>{{$tx.Sender}}</td>
+  </tr>
+  {{end}}
+  </tbody>
+
+</table>
+
+
+</html>
