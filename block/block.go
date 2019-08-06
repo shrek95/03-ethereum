@@ -68,7 +68,7 @@ func block(dtabse *sql.DB) {
 	lBlockInt64 := lBlockBig.Int64()
 	fmt.Println(reflect.TypeOf(lBlockInt64))
 	fmt.Println(reflect.TypeOf(headerL.Number))
-	start := lBlockInt64 - 1
+	start := lBlockInt64 - 10000
 
 	for i := start; i < lBlockInt64; i++ {
 		fmt.Printf("-------Block Number----- %d \n", i)
