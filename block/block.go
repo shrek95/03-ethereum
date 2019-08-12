@@ -135,9 +135,9 @@ func main() {
 	db.ChooseDB(dtabse, "ethBlock")
 	// db.DeleteTable(dtabse, "ethBlock", "transaction")
 	// db.DeleteTable(dtabse, "ethBlock", "block")
-	db.CreateTable(dtabse)
+	// db.CreateTable(dtabse)
 
-	// block(dtabse)
-	// defer db.CloseDB(dtabse)
+	block(dtabse)
+	db.CloseDB(dtabse)
 
 }

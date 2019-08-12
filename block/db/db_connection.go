@@ -31,10 +31,11 @@ type Block struct {
 var ip = os.Getenv("DOCKER_IP")
 var db = os.Getenv("DB_NAME")
 
-var path = "root:root@tcp(" + ip + ":3306)/" + db
+var path = "root:root@tcp(" + ip + ":3307)/" + db
 
 // CreateConn ...
 func CreateConn() *sql.DB {
+	fmt.Println(path)
 	db, err := sql.Open("mysql", path)
 	if err != nil {
 		fmt.Println(err.Error())
