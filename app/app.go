@@ -6,7 +6,6 @@ import (
 	"html/template"
 	"log"
 	"net/http"
-	"reflect"
 
 	"github.com/julienschmidt/httprouter"
 )
@@ -18,43 +17,62 @@ func init() {
 }
 
 type tx struct {
-	Tx_id    int64
-	Block_id int64
-	Tx_hash  string
+	TxID     int64
+	BlockID  int64
+	TxHash   string
 	Value    int64
 	Receiver string
 	Sender   string
 }
 
 func main() {
+	// multiplexer instance
 	mux := httprouter.New()
+	// mux /
 	mux.GET("/", transaction)
-	mux.POST("/transactions/", transactionDetails)
+	// mux /transactions
+	mux.GET("/transactions", transactionDetails)
+
+	// ListenAndServe for keeping server to listen on the port
 	http.ListenAndServe(":8080", mux)
 }
 
-func transaction(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
-	fmt.Println("transaction func triggered:")
+// transaction
+func transaction(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	err := tpl.ExecuteTemplate(w, "transaction.gohtml", nil)
-	HandleError(w, err)
+	handleError(w, err)
 }
 
-func transactionDetails(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
-	req.ParseForm()
-	fmt.Println(req.Form)
-	fmt.Println("transactionDetails func triggered:")
+// transactionDetails
+func transactionDetails(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	fmt.Println("TransactionDetails func is executing :")
+
+	// Parse the form
+	err := r.ParseForm()
+	// Handle error
+	handleError(w, err)
+
+	// create connection and get object for DB
 	dtabse := db.CreateConn()
+	// Choose DB
 	db.ChooseDB(dtabse, "ethBlock")
-	uaddr := req.Form["address"]
-	fmt.Println("uaddr type : ", reflect.TypeOf(uaddr))
-	addr := uaddr[0]
-	tx_slice := db.GetTxFromUAddr(dtabse, addr /*"0x34371D7Bd50936CB478145f11F7a3B24bf9D9D92"*/)
-	fmt.Println("tx_slice type", reflect.TypeOf(tx_slice))
-	err := tpl.ExecuteTemplate(w, "transactiondetails.gohtml", tx_slice)
-	HandleError(w, err)
+	// Access the form data under the name address
+	uaddr := r.FormValue("address")
+
+	// get the slice of transaction for the specific address
+	txSlice := db.GetTxFromUAddr(dtabse, uaddr)
+
+	// Close db
+	// db.CloseDB(dtabse)
+
+	// execute the template populated with transaction data
+	err = tpl.ExecuteTemplate(w, "transactiondetails.gohtml", txSlice)
+	// Handle error
+	handleError(w, err)
 }
 
-func HandleError(w http.ResponseWriter, err error) {
+// HandleError ...
+func handleError(w http.ResponseWriter, err error) {
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		log.Fatalln(err)

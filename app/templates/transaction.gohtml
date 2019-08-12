@@ -7,9 +7,12 @@
 <body>
 
 <strong>MATIC BLOCK DISPLAY</strong><br>
-<form method="POST" action="/transactions/">
-    User ADDRESS:<input type="text" value="address">
-    <input type="submit" value="send">
+<form method="get" action="/transactions">
+    <label>User ADDRESS:</label>
+    <br />
+    <input type="text" name="address" />
+    <br />
+    <input type="submit" name="send" />
 </form>
 
 </body>

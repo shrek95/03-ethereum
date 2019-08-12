@@ -1,4 +1,4 @@
-package main
+package db
 
 import (
 	"database/sql"
@@ -6,31 +6,34 @@ import (
 	"os"
 	"strconv"
 
+	// mysql
 	_ "github.com/go-sql-driver/mysql"
 )
 
-type transaction struct {
-	tx_id    int64
-	block_id int64
-	tx_hash  string
+// Transaction ...
+type Transaction struct {
+	txID     int64
+	blockID  int64
+	txHash   string
 	value    int
 	receiver string
 	sender   string
 }
 
-type block struct {
-	block_id   int64
-	block_num  string
-	block_hash string
-	tx_count   int
+// Block ...
+type Block struct {
+	blockID   int64
+	blockNum  string
+	blockHash string
+	txCount   int
 }
 
-var ip_addr = os.GetEnv("DOCKER_IP")
+var ip = os.Getenv("DOCKER_IP")
+var db = os.Getenv("DB_NAME")
 
-var path string
+var path = "root:root@tcp(" + ip + ":3306)/" + db
 
-// path = "root:root@tcp(" + ip_addr + ":3306)/"
-
+// CreateConn ...
 func CreateConn() *sql.DB {
 	db, err := sql.Open("mysql", path)
 	if err != nil {
@@ -49,6 +52,7 @@ func CreateConn() *sql.DB {
 	return db
 }
 
+// CreateDB ...
 func CreateDB(db *sql.DB, name string) {
 	query := "CREATE DATABASE " + name
 	_, err := db.Exec(query)
@@ -59,6 +63,7 @@ func CreateDB(db *sql.DB, name string) {
 	}
 }
 
+// ChooseDB ...
 func ChooseDB(db *sql.DB, dbName string) {
 	query := "USE " + dbName
 	_, err := db.Exec(query)
@@ -69,8 +74,9 @@ func ChooseDB(db *sql.DB, dbName string) {
 	}
 }
 
+// CreateTable ...
 func CreateTable(db *sql.DB) {
-	stmt, err := db.Prepare("CREATE TABLE IF NOT EXISTS block( block_id bigint NOT NULL AUTO_INCREMENT, block_num varchar(200), block_hash varchar(200), tx_count int, PRIMARY KEY (block_id) );")
+	stmt, err := db.Prepare("CREATE TABLE IF NOT EXISTS block( blockID bigint NOT NULL AUTO_INCREMENT, blockNum varchar(200), blockHash varchar(200), txCount int, PRIMARY KEY (blockID) );")
 	if err != nil {
 		fmt.Println(err.Error())
 	}
@@ -80,7 +86,7 @@ func CreateTable(db *sql.DB) {
 	} else {
 		fmt.Println("Block Table created successfully..")
 	}
-	stmttx, err := db.Prepare("CREATE TABLE IF NOT EXISTS transaction(tx_id bigint NOT NULL AUTO_INCREMENT, block_id bigint NOT NULL, tx_hash varchar(200), value bigint, receiver varchar(100), sender varchar(100), PRIMARY KEY (tx_id), FOREIGN KEY (block_id) REFERENCES block(block_id) );")
+	stmttx, err := db.Prepare("CREATE TABLE IF NOT EXISTS transaction(txID bigint NOT NULL AUTO_INCREMENT, blockID bigint NOT NULL, txHash varchar(200), value bigint, receiver varchar(100), sender varchar(100), PRIMARY KEY (txID), FOREIGN KEY (blockID) REFERENCES block(blockID) );")
 	if err != nil {
 		fmt.Println(err.Error())
 	}
@@ -92,51 +98,54 @@ func CreateTable(db *sql.DB) {
 	}
 }
 
-// value ko bigint karna table creation me
-func InsertTx(db *sql.DB, block_num string, tx_hash string, value int, receiver string, sender string) {
-	blockQuery := " SELECT block.block_id FROM block WHERE block.block_num = ?;"
-	rows, err := db.Query(blockQuery, block_num)
+// InsertTx ...
+func InsertTx(db *sql.DB, blockNum string, txHash string, value int, receiver string, sender string) {
+	blockQuery := " SELECT block.blockID FROM block WHERE block.blockNum = ?;"
+	rows, err := db.Query(blockQuery, blockNum)
 	if err != nil {
 		fmt.Println(err.Error())
 	}
 
 	defer rows.Close()
 
-	var block_id int
+	var blockID int
 	for rows.Next() {
-		if err := rows.Scan(&block_id); err != nil {
+		if err := rows.Scan(&blockID); err != nil {
 			fmt.Println(err.Error())
 		}
 	}
 
-	stmt, err := db.Prepare("INSERT INTO transaction( block_id, tx_hash, value, receiver, sender) VALUES( ?, ?, ?, ?, ? )")
+	stmt, err := db.Prepare("INSERT INTO transaction( blockID, txHash, value, receiver, sender) VALUES( ?, ?, ?, ?, ? )")
 	if err != nil {
 		fmt.Println(err.Error())
 	}
 
-	_, err = stmt.Exec(block_id, tx_hash, value, receiver, sender)
+	_, err = stmt.Exec(blockID, txHash, value, receiver, sender)
 	if err != nil {
 		fmt.Println(err.Error())
 	} else {
-		fmt.Println("Entry is successfull in transaction table: ")
+		fmt.Println("Entry in successfull in transaction table: ")
 	}
 }
 
-func InsertBlock(db *sql.DB, block_num string, block_hash string, tx_count int) {
-	stmt, err := db.Prepare("INSERT INTO block(block_num, block_hash, tx_count) VALUES(?, ?, ?)")
+// InsertBlock ...
+func InsertBlock(db *sql.DB, blockNum string, blockHash string, txCount int) {
+	stmt, err := db.Prepare("INSERT INTO block(blockNum, blockHash, txCount) VALUES(?, ?, ?)")
 	if err != nil {
 		fmt.Println(err.Error())
 	} else {
 		fmt.Println("Preparation successfull for block insert: ")
 	}
 
-	_, err = stmt.Exec(block_num, block_hash, tx_count)
+	_, err = stmt.Exec(blockNum, blockHash, txCount)
 	if err != nil {
 		fmt.Println(err.Error())
 	} else {
 		fmt.Println("Entry is block table is successfull: ")
 	}
 }
+
+// DeleteTable ...
 func DeleteTable(db *sql.DB, dbName string, tName string) {
 
 	dropTable := "DROP TABLE " + tName
@@ -157,8 +166,9 @@ func DeleteTable(db *sql.DB, dbName string, tName string) {
 	}
 }
 
-func GetTxOfBlockNumQuery(db *sql.DB, tName string, block_num int64) []transaction {
-	query := "SELECT transaction.* FROM block JOIN transaction ON block.block_id = transaction.block_id WHERE block.block_num = " + strconv.Itoa(int(block_num)) + ";"
+// GetTxOfBlockNumQuery ...
+func GetTxOfBlockNumQuery(db *sql.DB, tName string, blockNum int64) []Transaction {
+	query := "SELECT transaction.* FROM block JOIN transaction ON block.blockID = transaction.blockID WHERE block.blockNum = " + strconv.Itoa(int(blockNum)) + ";"
 	rows, err := db.Query(query)
 	if err != nil {
 		fmt.Println("Here is the error: " + err.Error())
@@ -168,11 +178,11 @@ func GetTxOfBlockNumQuery(db *sql.DB, tName string, block_num int64) []transacti
 
 	defer rows.Close()
 
-	txSlice := make([]transaction, 0)
+	txSlice := make([]Transaction, 0)
 
 	for rows.Next() {
-		var tx transaction
-		if err := rows.Scan(&tx.tx_id, &tx.block_id, &tx.tx_hash, &tx.value, &tx.receiver, &tx.sender); err != nil {
+		var tx Transaction
+		if err := rows.Scan(&tx.txID, &tx.blockID, &tx.txHash, &tx.value, &tx.receiver, &tx.sender); err != nil {
 			fmt.Println("Row scan failed: ")
 		}
 		txSlice = append(txSlice, tx)
@@ -187,7 +197,8 @@ func GetTxOfBlockNumQuery(db *sql.DB, tName string, block_num int64) []transacti
 	return txSlice
 }
 
-func GetTxFromUAddr(db *sql.DB, uAddr string) []transaction {
+// GetTxFromUAddr ...
+func GetTxFromUAddr(db *sql.DB, uAddr string) []Transaction {
 	query := "SELECT * FROM transaction WHERE transaction.sender=" + uAddr + " OR " + "transaction.receiver=" + uAddr + ";"
 	rows, err := db.Query(query)
 	if err != nil {
@@ -198,11 +209,11 @@ func GetTxFromUAddr(db *sql.DB, uAddr string) []transaction {
 
 	defer rows.Close()
 
-	txSlice := make([]transaction, 0)
+	txSlice := make([]Transaction, 0)
 
 	for rows.Next() {
-		var tx transaction
-		if err := rows.Scan(&tx.tx_id, &tx.block_id, &tx.tx_hash, &tx.value, &tx.receiver, &tx.sender); err != nil {
+		var tx Transaction
+		if err := rows.Scan(&tx.txID, &tx.blockID, &tx.txHash, &tx.value, &tx.receiver, &tx.sender); err != nil {
 			fmt.Println("Row scan failed: ")
 		}
 		txSlice = append(txSlice, tx)
@@ -217,26 +228,7 @@ func GetTxFromUAddr(db *sql.DB, uAddr string) []transaction {
 	return txSlice
 }
 
+// CloseDB ...
 func CloseDB(db *sql.DB) {
 	db.Close()
-}
-
-
-func main() {
-	db := CreateConn()
-
-	// CreateDB(db, "ethBlock")
-	ChooseDB(db, "ethBlock")
-	// CreateTable(db)
-	//	DeleteTable(db, "ethBlock", "transaction")
-	//	DeleteTable(db, "ethBlock", "block")
-	//	Insert(db, 223344, "0x223344", "0x556677", 12)
-	//	Insert(db, 223345, "0x223355", "0x556688", 13)
-	// 	InsertTx(db, 112233, 223344, "0x998899", 100000, "0x787979", "0x3953000")
-
-	// InsertTx(db, 112234, 223344, "0x998898", 10, "0x7879", "0x395")
-	// InsertTx(db, 112235, 223344, "0x998897", 10, "0x7877", "0x3956")
-	//	GetTxOfBlockIdQuery(db, "block", 223344)
-	// defer CloseDB(db)
-
 }
